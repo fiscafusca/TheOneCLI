@@ -4,18 +4,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type FlagPole struct {
-	Name   string
-	Config string
-}
+var cfgFile string
 
-// NewRootCommand returns a new cobra.Command for root command
 func NewRootCommand() *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:   "onecli",
-		Short: "A CLI to rule them all",
+		Short: "One CLI to rule them all",
+		Long: `One CLI to rule them all,
+One CLI to find them,
+One CLI to bring them all and in the cluster deploy them.`,
 	}
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "custom config file")
+
+	rootCmd.AddCommand(NewInitCommand())
 
 	return rootCmd
 }
