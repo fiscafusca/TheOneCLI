@@ -4,7 +4,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cfgFile string
+type flagPole struct {
+	name       string
+	namespace  string
+	configFile string
+}
+
+var flags = &flagPole{}
 
 func NewRootCommand() *cobra.Command {
 
@@ -16,9 +22,10 @@ One CLI to find them,
 One CLI to bring them all and in the cluster deploy them.`,
 	}
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "custom config file")
+	rootCmd.PersistentFlags().StringVar(&flags.configFile, "config", "", "custom config file")
 
 	rootCmd.AddCommand(NewInitCommand())
+	rootCmd.AddCommand(NewDeployCommand())
 
 	return rootCmd
 }

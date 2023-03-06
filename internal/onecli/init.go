@@ -31,14 +31,14 @@ descriptiooooooooooooooooooooooooooooon.`,
 		},
 	}
 
-	initCmd.Flags().StringVar(&name, "name", defaultName, "project name")
+	initCmd.Flags().StringVar(&flags.name, "name", defaultName, "project name")
 	viper.BindPFlag("name", initCmd.Flags().Lookup("name"))
 	return initCmd
 }
 
 func initProject() error {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	if flags.configFile != "" {
+		viper.SetConfigFile(flags.configFile)
 	} else {
 
 		currentPath, err := os.Getwd()
