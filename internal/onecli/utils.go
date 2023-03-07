@@ -3,6 +3,7 @@ package onecli
 import (
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -39,6 +40,7 @@ type K8sClients struct {
 	discovery discovery.DiscoveryInterface
 }
 
+// FromGVKtoGVR converts Group Version Kind to Group Version Resource
 func FromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.GroupVersionKind) (schema.GroupVersionResource, error) {
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
 	a, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
@@ -48,20 +50,34 @@ func FromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.Group
 	return a.Resource, nil
 }
 
-func NewResourcesFromFile(filepath string) ([]Resource, error) {
+// NewResourcesFromFiles creates new deployable resources from the YAML manifests
+func NewResourcesFromFiles(resourcesPath string) ([]Resource, error) {
 	var stream []byte
 	var err error
+	var resources []Resource
 
-	// only reading from file
-	stream, err = os.ReadFile(filepath)
-
+	files, err := os.ReadDir(resourcesPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return createResourcesFromBuffer(stream, filepath)
+	for _, file := range files {
+		filePath := path.Join(resourcesPath, file.Name())
+		stream, err = os.ReadFile(filePath)
+		if err != nil {
+			return nil, err
+		}
+		r, err := createResourcesFromBuffer(stream, resourcesPath)
+		if err != nil {
+			return nil, err
+		}
+		resources = append(resources, r...)
+	}
+
+	return resources, nil
 }
 
+// createResourcesFromBuffer creates new deployable resources from a byte stream
 func createResourcesFromBuffer(stream []byte, filepath string) ([]Resource, error) {
 	var resources []Resource
 
