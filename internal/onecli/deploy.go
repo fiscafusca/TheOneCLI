@@ -3,7 +3,7 @@ package onecli
 import (
 	"context"
 	"fmt"
-	"path"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -14,8 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
-	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -33,11 +31,10 @@ func NewDeployCommand() *cobra.Command {
 		Long: `A veeeeeeeeeeeeeeeeeeeeery
 loooooooooooooooooooooooooooooooooooong
 descriptiooooooooooooooooooooooooooooon.`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			fmt.Println("Deploying...")
 
-			cfg, err := clientcmd.BuildConfigFromFlags("", "/home/giorgia/.kube/config")
+			cfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 			if err != nil {
 				return err
 			}
@@ -46,19 +43,20 @@ descriptiooooooooooooooooooooooooooooon.`,
 				dynamic:   dynamic.NewForConfigOrDie(cfg),
 				discovery: discovery.NewDiscoveryClientForConfigOrDie(cfg),
 			}
-			path := path.Join(args[0], "pod.yaml")
-			resources, err := NewResourcesFromFile(path)
+
+			resources, err := NewResourcesFromFiles("./resources")
 			if err != nil {
 				return err
 			}
-			return Deploy(clients, flags.namespace, resources)
+			return Deploy(clients, opts.namespace, resources)
 		},
 	}
 
-	initCmd.Flags().StringVar(&flags.namespace, "namespace", "default", "namespace")
+	initCmd.Flags().StringVar(&opts.namespace, "namespace", "default", "namespace")
 	return initCmd
 }
 
+// Deploy ensures the existance of the namespace and calls the apply function for each resource
 func Deploy(clients *K8sClients, namespace string, resources []Resource) error {
 	if namespace != "" {
 		if err := ensureNamespaceExistence(clients, namespace); err != nil {
@@ -76,6 +74,7 @@ func Deploy(clients *K8sClients, namespace string, resources []Resource) error {
 	return nil
 }
 
+// apply is the function that actually creates/patches resources on the cluster
 func apply(clients *K8sClients, res Resource) error {
 	gvr, err := FromGVKtoGVR(clients.discovery, res.Object.GroupVersionKind())
 	if err != nil {
@@ -94,11 +93,10 @@ func apply(clients *K8sClients, res Resource) error {
 	return PatchResource(gvr, clients, res, onClusterObj)
 }
 
+// CreateResource creates a K8S resource on the cluster if it does not exist
 func CreateResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) error {
 	fmt.Printf("Creating %s: %s\n", res.Object.GetKind(), res.Object.GetName())
 
-	// creates kubectl.kubernetes.io/last-applied-configuration annotation
-	// inside the resource except for Secrets, ConfigMaps, and CRDs
 	originAnn := res.Object.GetAnnotations()
 	if originAnn == nil {
 		originAnn = make(map[string]string)
@@ -110,28 +108,20 @@ func CreateResource(gvr schema.GroupVersionResource, clients *K8sClients, res Re
 	originAnn[corev1.LastAppliedConfigAnnotation] = string(objJSON)
 	res.Object.SetAnnotations(originAnn)
 
-	// var resourceInterface dynamic.ResourceInterface
-	// switch res.Namespaced {
-	// case True:
-	// 	resourceInterface = clients.dynamic.Resource(gvr).Namespace(res.Object.GetNamespace())
-	// case False:
-	// 	resourceInterface = clients.dynamic.Resource(gvr)
-	// case None:
-	// 	return fmt.Errorf("resource %s %s is unknown in cluster, can't apply it", res.Object.GetName(), gvr)
-	// }
-
 	resourceInterface := clients.dynamic.Resource(gvr).Namespace(res.Object.GetNamespace())
 
 	_, err = resourceInterface.Create(context.Background(), &res.Object, metav1.CreateOptions{})
 	return err
 }
 
+// GetResource returns a given resource from the cluster
 func GetResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) (*unstructured.Unstructured, error) {
 	return clients.dynamic.Resource(gvr).
 		Namespace(res.Object.GetNamespace()).
 		Get(context.Background(), res.Object.GetName(), metav1.GetOptions{})
 }
 
+// PatchResource patches an existing resource on the cluster
 func PatchResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource, onClusterObj *unstructured.Unstructured) error {
 	// create the patch
 	patch, patchType, err := createPatch(*onClusterObj, res)
@@ -139,20 +129,13 @@ func PatchResource(gvr schema.GroupVersionResource, clients *K8sClients, res Res
 		return errors.Wrap(err, "failed to create patch")
 	}
 
-	var resourceInterface dynamic.ResourceInterface
-	switch res.Namespaced {
-	case True:
-		resourceInterface = clients.dynamic.Resource(gvr).Namespace(res.Object.GetNamespace())
-	case False:
-		resourceInterface = clients.dynamic.Resource(gvr)
-	case None:
-		return fmt.Errorf("resource %s %s is unknown in cluster, can't patch it", res.Object.GetName(), gvr)
-	}
+	resourceInterface := clients.dynamic.Resource(gvr).Namespace(res.Object.GetNamespace())
 
 	_, err = resourceInterface.Patch(context.Background(), res.Object.GetName(), patchType, patch, metav1.PatchOptions{})
 	return err
 }
 
+// createPatch is a helper function that creates the patch to deploy
 func createPatch(currentObj unstructured.Unstructured, target Resource) ([]byte, types.PatchType, error) {
 	// Get the resource in the cluster
 	currentJSON, err := currentObj.MarshalJSON()
@@ -190,16 +173,6 @@ func createPatch(currentObj unstructured.Unstructured, target Resource) ([]byte,
 		return nil, "", err
 	}
 
-	// use a three way json merge if the resource is a CRD
-	if runtime.IsNotRegisteredError(err) {
-		// fall back to generic JSON merge patch
-		patchType := types.MergePatchType
-		preconditions := []mergepatch.PreconditionFunc{mergepatch.RequireKeyUnchanged("apiVersion"),
-			mergepatch.RequireKeyUnchanged("kind"), mergepatch.RequireMetadataKeyUnchanged("name")}
-		patch, err := jsonmergepatch.CreateThreeWayJSONMergePatch([]byte(lastAppliedConfigAnnotation), targetJSON, currentJSON, preconditions...)
-		return patch, patchType, err
-	}
-
 	patchMeta, err := strategicpatch.NewPatchMetaFromStruct(versionedObject)
 	if err != nil {
 		return nil, types.StrategicMergePatchType, errors.Wrap(err, "unable to create patch metadata from object")
@@ -209,6 +182,8 @@ func createPatch(currentObj unstructured.Unstructured, target Resource) ([]byte,
 	return patch, types.StrategicMergePatchType, err
 }
 
+// ensureNamespaceExistence is a helper function that checks the existence of a namespace
+// and creates it if it does not exist
 func ensureNamespaceExistence(clients *K8sClients, namespace string) error {
 	ns := &unstructured.Unstructured{}
 	ns.SetUnstructuredContent(map[string]interface{}{
@@ -227,6 +202,7 @@ func ensureNamespaceExistence(clients *K8sClients, namespace string) error {
 	return nil
 }
 
+// annotateWithLastApplied handles the lastAppliedConfiguration annotation
 func annotateWithLastApplied(res Resource) (unstructured.Unstructured, error) {
 	annotatedRes := res.Object.DeepCopy()
 	annotations := annotatedRes.GetAnnotations()
