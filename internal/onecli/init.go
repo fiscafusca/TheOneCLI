@@ -39,29 +39,10 @@ func initProject() error {
 	if err != nil {
 		return err
 	}
-	opts.projectPath = path.Join(currentPath, opts.name)
-	if err := os.Mkdir(opts.projectPath, fs.ModePerm); err != nil && !errors.Is(err, fs.ErrExist) {
-		return err
-	}
-	resourcesDir := path.Join(opts.projectPath, "resources")
+
+	resourcesDir := path.Join(currentPath, "resources")
 	if err := os.Mkdir(resourcesDir, fs.ModePerm); err != nil && !errors.Is(err, fs.ErrExist) {
 		return err
-	}
-
-	viper.AddConfigPath(opts.projectPath)
-	viper.SetConfigType("yaml")
-	viper.SetConfigName("onecli")
-
-	contextMap := make(map[string]interface{})
-	contextMap["default"] = []string{}
-	viper.Set("k8s-contexts", contextMap)
-
-	if err := viper.SafeWriteConfig(); err != nil {
-		viper.SafeWriteConfigAs(opts.projectPath)
-	}
-
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println("Error loading file:", viper.ConfigFileUsed())
 	}
 	return nil
 }
