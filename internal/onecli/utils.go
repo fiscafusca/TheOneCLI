@@ -8,10 +8,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
-	memory "k8s.io/client-go/discovery/cached"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/restmapper"
 	k8syaml "sigs.k8s.io/yaml"
 )
 
@@ -33,21 +29,6 @@ type Resource struct {
 type ResourceList struct {
 	Kind      *schema.GroupVersionKind `json:"kind"`
 	Resources []string                 `json:"resources"`
-}
-
-type K8sClients struct {
-	dynamic   dynamic.Interface
-	discovery discovery.DiscoveryInterface
-}
-
-// FromGVKtoGVR converts Group Version Kind to Group Version Resource
-func FromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.GroupVersionKind) (schema.GroupVersionResource, error) {
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
-	a, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return schema.GroupVersionResource{}, err
-	}
-	return a.Resource, nil
 }
 
 // NewResourcesFromFiles creates new deployable resources from the YAML manifests
