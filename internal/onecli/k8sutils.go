@@ -3,6 +3,7 @@ package onecli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -16,9 +17,13 @@ import (
 	"k8s.io/client-go/discovery"
 	memory "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubectl/pkg/scheme"
 )
+
+var kubeconfig = os.Getenv("KUBECONFIG")
 
 type K8sClients struct {
 	dynamic   dynamic.Interface
@@ -165,4 +170,31 @@ func annotateWithLastApplied(res Resource) (unstructured.Unstructured, error) {
 	annotatedRes.SetAnnotations(annotations)
 
 	return *annotatedRes, nil
+}
+
+func buildConfigWithContext(context, kubeconfigPath string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
+}
+
+func createK8sClients(context string) (*K8sClients, error) {
+	var cfg *rest.Config
+	var err error
+
+	if context == "" {
+		cfg, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	} else {
+		cfg, err = buildConfigWithContext(context, kubeconfig)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &K8sClients{
+		dynamic:   dynamic.NewForConfigOrDie(cfg),
+		discovery: discovery.NewDiscoveryClientForConfigOrDie(cfg),
+	}, nil
 }
