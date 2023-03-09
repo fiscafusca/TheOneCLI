@@ -11,24 +11,9 @@ import (
 	k8syaml "sigs.k8s.io/yaml"
 )
 
-type ResourceNamespace int8
-
-const (
-	None ResourceNamespace = iota
-	True
-	False
-)
-
 type Resource struct {
-	Filepath         string
 	GroupVersionKind *schema.GroupVersionKind
 	Object           unstructured.Unstructured
-	Namespaced       ResourceNamespace
-}
-
-type ResourceList struct {
-	Kind      *schema.GroupVersionKind `json:"kind"`
-	Resources []string                 `json:"resources"`
 }
 
 // NewResourcesFromFiles creates new deployable resources from the YAML manifests
@@ -75,10 +60,8 @@ func createResourcesFromBuffer(stream []byte, filepath string) ([]Resource, erro
 		gvk := u.GroupVersionKind()
 
 		resource := Resource{
-			Filepath:         filepath,
 			GroupVersionKind: &gvk,
 			Object:           u,
-			Namespaced:       None,
 		}
 
 		resources = append(resources, resource)
