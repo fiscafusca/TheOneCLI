@@ -30,8 +30,8 @@ type K8sClients struct {
 	discovery discovery.DiscoveryInterface
 }
 
-// FromGVKtoGVR converts Group Version Kind to Group Version Resource
-func FromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.GroupVersionKind) (schema.GroupVersionResource, error) {
+// fromGVKtoGVR converts Group Version Kind to Group Version Resource
+func fromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.GroupVersionKind) (schema.GroupVersionResource, error) {
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
 	a, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
@@ -40,15 +40,15 @@ func FromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.Group
 	return a.Resource, nil
 }
 
-// GetResource returns a given resource from the cluster
-func GetResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) (*unstructured.Unstructured, error) {
+// getResource returns a given resource from the cluster
+func getResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) (*unstructured.Unstructured, error) {
 	return clients.dynamic.Resource(gvr).
 		Namespace(res.Object.GetNamespace()).
 		Get(context.Background(), res.Object.GetName(), metav1.GetOptions{})
 }
 
-// CreateResource creates a K8S resource on the cluster if it does not exist
-func CreateResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) error {
+// createResource creates a K8S resource on the cluster if it does not exist
+func createResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) error {
 	fmt.Printf("Creating %s: %s\n", res.Object.GetKind(), res.Object.GetName())
 
 	originAnn := res.Object.GetAnnotations()
@@ -68,8 +68,8 @@ func CreateResource(gvr schema.GroupVersionResource, clients *K8sClients, res Re
 	return err
 }
 
-// PatchResource patches an existing resource on the cluster
-func PatchResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource, onClusterObj *unstructured.Unstructured) error {
+// patchResource patches an existing resource on the cluster
+func patchResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource, onClusterObj *unstructured.Unstructured) error {
 	// create the patch
 	patch, patchType, err := createPatch(*onClusterObj, res)
 	if err != nil {
@@ -141,7 +141,6 @@ func ensureNamespaceExistence(clients *K8sClients, namespace string) error {
 		},
 	})
 
-	fmt.Printf("Creating namespace %s\n", namespace)
 	if _, err := clients.dynamic.Resource(gvrNamespaces).Create(context.Background(), ns, metav1.CreateOptions{}); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -172,6 +171,7 @@ func annotateWithLastApplied(res Resource) (unstructured.Unstructured, error) {
 	return *annotatedRes, nil
 }
 
+// buildConfigWithContext returns a REST config using the passed context name
 func buildConfigWithContext(context, kubeconfigPath string) (*rest.Config, error) {
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
@@ -180,6 +180,7 @@ func buildConfigWithContext(context, kubeconfigPath string) (*rest.Config, error
 		}).ClientConfig()
 }
 
+// createK8sClients returns the dynamic and discovery clients to interact with the cluster
 func createK8sClients(context string) (*K8sClients, error) {
 	var cfg *rest.Config
 	var err error
