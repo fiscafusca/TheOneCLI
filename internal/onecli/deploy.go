@@ -26,6 +26,10 @@ descriptiooooooooooooooooooooooooooooon.`,
 			var err error
 			var clients *K8sClients
 
+			if viper.Get("contexts") == nil {
+				return fmt.Errorf("no k8s context specified in the config file: add at least one context")
+			}
+
 			contextsMap := viper.Get("contexts")
 
 			// deploy all contexts
@@ -94,19 +98,19 @@ func deployResources(clients *K8sClients, namespace string, resources []Resource
 
 // applyResource is the function that actually creates/patches resources on the cluster
 func applyResource(clients *K8sClients, res Resource) error {
-	gvr, err := FromGVKtoGVR(clients.discovery, res.Object.GroupVersionKind())
+	gvr, err := fromGVKtoGVR(clients.discovery, res.Object.GroupVersionKind())
 	if err != nil {
 		return err
 	}
 
-	onClusterObj, err := GetResource(gvr, clients, res)
+	onClusterObj, err := getResource(gvr, clients, res)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return CreateResource(gvr, clients, res)
+			return createResource(gvr, clients, res)
 		}
 
 		return err
 	}
 
-	return PatchResource(gvr, clients, res, onClusterObj)
+	return patchResource(gvr, clients, res, onClusterObj)
 }
