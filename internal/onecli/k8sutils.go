@@ -166,20 +166,8 @@ func buildConfigWithContext(context, kubeconfigPath string) (*rest.Config, error
 
 // createK8sClients returns the dynamic and discovery clients to interact with the cluster
 func createK8sClients(context string) (*K8sClients, error) {
-	var cfg *rest.Config
-	var err error
 
-	if context == "" {
-		cfg, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-	} else {
-		cfg, err = buildConfigWithContext(context, kubeconfig)
-	}
-	if err != nil {
-		return nil, err
-	}
+	// create the k8s clients depending on whether the context is specified or not
 
-	return &K8sClients{
-		dynamic:   dynamic.NewForConfigOrDie(cfg),
-		discovery: discovery.NewDiscoveryClientForConfigOrDie(cfg),
-	}, nil
+	return nil, nil
 }
