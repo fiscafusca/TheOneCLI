@@ -1,14 +1,9 @@
 package onecli
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
-	"path"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const defaultName = "onecli"
@@ -29,20 +24,14 @@ descriptiooooooooooooooooooooooooooooon.`,
 		},
 	}
 
-	initCmd.Flags().StringVar(&opts.name, "name", defaultName, "project name")
-	viper.BindPFlag("name", initCmd.Flags().Lookup("name"))
+	// add and bind the name flag
+
 	return initCmd
 }
 
 func initProject() error {
-	currentPath, err := os.Getwd()
-	if err != nil {
-		return err
-	}
 
-	resourcesDir := path.Join(currentPath, "resources")
-	if err := os.Mkdir(resourcesDir, fs.ModePerm); err != nil && !errors.Is(err, fs.ErrExist) {
-		return err
-	}
+	// initialize the resources folder inside the current directory
+
 	return nil
 }
