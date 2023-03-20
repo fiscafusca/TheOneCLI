@@ -42,44 +42,28 @@ func fromGVKtoGVR(discoveryClient discovery.DiscoveryInterface, gvk schema.Group
 
 // getResource returns a given resource from the cluster
 func getResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) (*unstructured.Unstructured, error) {
-	return clients.dynamic.Resource(gvr).
-		Namespace(res.Object.GetNamespace()).
-		Get(context.Background(), res.Object.GetName(), metav1.GetOptions{})
+
+	// retrieve the specified resource from the cluster
+
+	return nil, nil
 }
 
 // createResource creates a K8S resource on the cluster if it does not exist
 func createResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource) error {
+
+	// create and apply a new resource (remember to set the LastAppliedConfiguration)
 	fmt.Printf("Creating %s: %s\n", res.Object.GetKind(), res.Object.GetName())
 
-	originAnn := res.Object.GetAnnotations()
-	if originAnn == nil {
-		originAnn = make(map[string]string)
-	}
-	objJSON, err := res.Object.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	originAnn[corev1.LastAppliedConfigAnnotation] = string(objJSON)
-	res.Object.SetAnnotations(originAnn)
-
-	resourceInterface := clients.dynamic.Resource(gvr).Namespace(res.Object.GetNamespace())
-
-	_, err = resourceInterface.Create(context.Background(), &res.Object, metav1.CreateOptions{})
-	return err
+	return nil
 }
 
 // patchResource patches an existing resource on the cluster
 func patchResource(gvr schema.GroupVersionResource, clients *K8sClients, res Resource, onClusterObj *unstructured.Unstructured) error {
-	// create the patch
-	patch, patchType, err := createPatch(*onClusterObj, res)
-	if err != nil {
-		return errors.Wrap(err, "failed to create patch")
-	}
 
-	resourceInterface := clients.dynamic.Resource(gvr).Namespace(res.Object.GetNamespace())
+	// create the patch and apply the patched resource
+	fmt.Printf("Patching %s: %s\n", res.Object.GetKind(), res.Object.GetName())
 
-	_, err = resourceInterface.Patch(context.Background(), res.Object.GetName(), patchType, patch, metav1.PatchOptions{})
-	return err
+	return nil
 }
 
 // createPatch is a helper function that creates the patch to deploy
