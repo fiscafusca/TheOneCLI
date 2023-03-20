@@ -32,18 +32,8 @@ descriptiooooooooooooooooooooooooooooon.`,
 
 			contextsMap := viper.Get("contexts")
 
-			// deploy all contexts
 			if len(args) == 0 {
-				for context := range contextsMap.(map[string]interface{}) {
-					clients, err = createK8sClients(context)
-					if err != nil {
-						return err
-					}
-					err = deployInContext(context, clients, contextsMap.(map[string]interface{}))
-					if err != nil {
-						return err
-					}
-				}
+				// deploy all contexts
 			} else {
 				// deploy in given context
 				clients, err = createK8sClients(args[0])
