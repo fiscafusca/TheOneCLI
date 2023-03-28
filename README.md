@@ -1,4 +1,6 @@
-# One CLI to rule them all (Codemotion Workshop Fest 2023)
+# One CLI to rule them all 
+
+## Codemotion Workshop Fest 2023
 
 >*One CLI to rule them all,
 One CLI to find them,
