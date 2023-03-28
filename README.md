@@ -1,4 +1,4 @@
-# One CLI to rule them all 
+# One CLI to rule them all
 
 ## Codemotion Workshop Fest 2023
 
@@ -6,7 +6,7 @@
 One CLI to find them,
 One CLI to bring them all and in the cluster deploy them.*
 
-Welcome, fellow travelers! If you're here, chances are you're embarking on a journey to forge **The One CLI**. 
+Welcome, fellow travelers! If you're here, chances are you're embarking on a journey to forge **The One CLI**.
 
 As Gandalf once said, *"All we have to decide is what to do with the time that is given us"*. So let's get started on this epic adventure!
 
