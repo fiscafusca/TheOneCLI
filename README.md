@@ -13,7 +13,7 @@ You came a long way! We have our CLI, we have our K8s resources... Time to **DEP
 ### What are we going to do in this step?
 
 - Write some useful helper functions to **get**, **create**, and **patch** resources on the cluster
-- Write a function that deploys the resources in a given context
+- Write a function that **deploys** the resources in a given **context**
 - Implement the `deploy` Cobra command
 
 If you get lost in the process, don't worry! You can still checkout to the next step and resume from there!
