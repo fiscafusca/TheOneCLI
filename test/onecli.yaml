@@ -1,0 +1,6 @@
+name: onecli
+contexts:
+  shire:
+    - frodo.yaml
+  mordor:
+    - sauron.yaml
