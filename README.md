@@ -35,7 +35,7 @@ Impatient to know what we are going to implement? Here's a sneak peek for you:
 
 - **Step 0:** Cobra initialization, `init` command
 - **Step 1:** `add-context` command
-- **Step 2:** read YAML manifest and create K8s resources
+- **Step 2:** create K8s resources from YAML manifests, and initialize K8s clients
 - **Step 3:** `deploy` command
 - **Step 4:** multi-cluster deployment
 
