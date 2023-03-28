@@ -12,8 +12,9 @@ The One CLI is starting to take shape! Impatient to interact with the cluster? W
 
 ### What are we going to do in this step?
 
-- **Read YAML manifests** into byte streams
-- **Create K8s resources** from these byte streams
+- **Read** YAML manifests into byte streams
+- Create **K8s resources** from these byte streams
+- Create the **K8s clients** to interact with the cluster
 
 If you get lost in the process, don't worry! You can still checkout to the next step and resume from there!
 
